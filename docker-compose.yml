@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: dashboard_test   
+      POSTGRES_USER: dashboard_user 
+      POSTGRES_PASSWORD: password    
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard_user -d dashboard_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://dashboard_user:password@db:5432/dashboard_test  
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - dashboard-network
+    volumes:
+    - ./backend/src:/usr/src/app/src
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - dashboard-network
+    volumes:
+      - ./frontend/src:/usr/src/app/src
+
+volumes:
+  db_data:
+
+networks:
+  dashboard-network:
+    driver: bridge
